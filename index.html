@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Propulsion Test Stand Safety Interlock Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Propulsion Test Stand Safety Interlock Simulator</h1>
+      <p class="subtitle">Simulated logic for a rocket engine / propulsion test stand safety system.</p>
+    </div>
+    <div class="header-status">
+      <span class="label">SYSTEM STATE:</span>
+      <span id="systemState" class="badge badge-idle">IDLE</span>
+      <span class="label small">RUN ID:</span>
+      <span id="runId" class="badge badge-secondary">—</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT COLUMN: Permissives & Interlocks -->
+    <section class="panel">
+      <h2>Permissives</h2>
+      <p class="panel-desc">
+        All permissives must be satisfied before the system can be ARMED.
+      </p>
+      <div class="list">
+        <div class="list-item">
+          <div>
+            <div class="item-title">Personnel Clear</div>
+            <div class="item-sub">No one in test cell / hazard zone.</div>
+          </div>
+          <div class="item-controls">
+            <label class="switch">
+              <input type="checkbox" id="permPersonnelClear">
+              <span class="slider"></span>
+            </label>
+            <span class="indicator indicator-bad" id="permPersonnelClearIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">Vent Valves Open</div>
+            <div class="item-sub">Propellant/pressurant vent path available.</div>
+          </div>
+          <div class="item-controls">
+            <label class="switch">
+              <input type="checkbox" id="permVentOpen">
+              <span class="slider"></span>
+            </label>
+            <span class="indicator indicator-bad" id="permVentOpenIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">DAQ & Telemetry Ready</div>
+            <div class="item-sub">Data logging and comms are online.</div>
+          </div>
+          <div class="item-controls">
+            <label class="switch">
+              <input type="checkbox" id="permDAQReady">
+              <span class="slider"></span>
+            </label>
+            <span class="indicator indicator-bad" id="permDAQReadyIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">Gas Supply Stable</div>
+            <div class="item-sub">Tank pressure within standby band.</div>
+          </div>
+          <div class="item-controls">
+            <label class="switch">
+              <input type="checkbox" id="permGasStable">
+              <span class="slider"></span>
+            </label>
+            <span class="indicator indicator-bad" id="permGasStableIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">Emergency System Healthy</div>
+            <div class="item-sub">E-stop chain OK, abort valves functional.</div>
+          </div>
+          <div class="item-controls">
+            <label class="switch">
+              <input type="checkbox" id="permEmergencyHealthy">
+              <span class="slider"></span>
+            </label>
+            <span class="indicator indicator-bad" id="permEmergencyHealthyIndicator"></span>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 1.5rem;">Interlocks</h2>
+      <p class="panel-desc">
+        Interlocks automatically force an ABORT if any unsafe condition is detected.
+      </p>
+      <div class="list">
+        <div class="list-item">
+          <div>
+            <div class="item-title">Overpressure</div>
+            <div class="item-sub">Chamber or tank exceeds safe limits.</div>
+          </div>
+          <div class="item-controls">
+            <span class="indicator indicator-ok" id="ilOverpressureIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">High Temperature</div>
+            <div class="item-sub">Critical hardware temperature too high.</div>
+          </div>
+          <div class="item-controls">
+            <span class="indicator indicator-ok" id="ilHighTempIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">Unexpected Flame</div>
+            <div class="item-sub">Flame detection when none expected.</div>
+          </div>
+          <div class="item-controls">
+            <span class="indicator indicator-ok" id="ilFlameIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">Loss of Telemetry</div>
+            <div class="item-sub">Comms to DAQ or control lost.</div>
+          </div>
+          <div class="item-controls">
+            <span class="indicator indicator-ok" id="ilTelemetryIndicator"></span>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div>
+            <div class="item-title">Emergency Stop</div>
+            <div class="item-sub">Manual E-stop pressed at any console.</div>
+          </div>
+          <div class="item-controls">
+            <button id="btnEstop" class="btn btn-danger">E-STOP</button>
+            <span class="indicator indicator-ok" id="ilEstopIndicator"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MIDDLE COLUMN: Controls & Sensors -->
+    <section class="panel">
+      <h2>Test Stand Controls</h2>
+      <p class="panel-desc">
+        Drive the test sequence and observe how the safety logic responds.
+      </p>
+
+      <div class="control-row">
+        <button id="btnReset" class="btn btn-outline">Reset System</button>
+        <button id="btnArm" class="btn btn-primary" disabled>Arm System</button>
+        <button id="btnStart" class="btn btn-accent" disabled>Start Sequence</button>
+        <button id="btnAbort" class="btn btn-danger" disabled>Abort</button>
+      </div>
+
+      <div class="card">
+        <h3>Automated Test Sequence</h3>
+        <ol class="sequence-list">
+          <li><strong>CHILLDOWN</strong> – pre-flow to cool plumbing.</li>
+          <li><strong>PRESSURIZE</strong> – bring tank to setpoint.</li>
+          <li><strong>IGNITION</strong> – igniter on, main valves near-open.</li>
+          <li><strong>BURN</strong> – main burn window.</li>
+          <li><strong>SHUTDOWN</strong> – valves closed, venting.</li>
+        </ol>
+        <p class="sequence-status">
+          Active step: <span id="sequenceStep">—</span>
+        </p>
+        <div class="sequence-bar">
+          <div id="sequenceProgress" class="sequence-progress"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Sensors & Environment (Simulated)</h3>
+        <div class="sensor">
+          <label for="sensorTankPressure">
+            Tank Pressure (psi)
+            <span id="sensorTankPressureValue" class="sensor-value">0</span>
+          </label>
+          <input type="range" min="0" max="800" value="50" id="sensorTankPressure">
+        </div>
+
+        <div class="sensor">
+          <label for="sensorChamberPressure">
+            Chamber Pressure (psi)
+            <span id="sensorChamberPressureValue" class="sensor-value">0</span>
+          </label>
+          <input type="range" min="0" max="1000" value="0" id="sensorChamberPressure">
+        </div>
+
+        <div class="sensor">
+          <label for="sensorTemperature">
+            Critical Hardware Temp (°C)
+            <span id="sensorTemperatureValue" class="sensor-value">25</span>
+          </label>
+          <input type="range" min="0" max="1000" value="25" id="sensorTemperature">
+        </div>
+
+        <div class="sensor-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="sensorFlameDetected">
+            Unexpected flame detected
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="sensorTelemetryLost">
+            Telemetry link lost
+          </label>
+        </div>
+
+        <div class="control-row">
+          <button id="btnInjectRandomFault" class="btn btn-warning">Inject Random Fault</button>
+          <span class="hint">Use during active sequence to trigger an ABORT.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Status & Logs -->
+    <section class="panel">
+      <h2>Status & Timeline</h2>
+      <div class="card">
+        <h3>Logic Summary</h3>
+        <ul class="summary-list">
+          <li>
+            <span class="summary-label">All Permissives OK:</span>
+            <span id="summaryPermissives" class="summary-badge badge-bad">NO</span>
+          </li>
+          <li>
+            <span class="summary-label">Any Interlock Active:</span>
+            <span id="summaryInterlocks" class="summary-badge badge-ok">NO</span>
+          </li>
+          <li>
+            <span class="summary-label">Sequence Running:</span>
+            <span id="summarySequence" class="summary-badge badge-secondary">NO</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Timeline / Event Log</h3>
+        <div id="log" class="log"></div>
+      </div>
+
+      <div class="card">
+        <h3>Limits (for Interlocks)</h3>
+        <ul class="limits-list">
+          <li>Tank pressure limit: <strong>&gt; 750 psi → Overpressure</strong></li>
+          <li>Chamber pressure limit: <strong>&gt; 900 psi → Overpressure</strong></li>
+          <li>Critical temp limit: <strong>&gt; 850 °C → High Temperature</strong></li>
+          <li>Unexpected flame detection → Immediate ABORT</li>
+          <li>Telemetry loss → Immediate ABORT</li>
+          <li>E-STOP → Immediate ABORT + lockout</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Educational simulator — modeling high-level safety logic, not a real control system.</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
